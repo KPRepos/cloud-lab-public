@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nginx-apps-int-not-istio
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment-int-not-istio
+  namespace: nginx-apps-int-not-istio
+spec:
+  selector:
+    matchLabels:
+      app: nginx-int-not-istio
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx-int-not-istio
+    spec:
+      containers:
+      - name: nginx-int-not-istio
+        image: nginx:1.14
+        ports:
+        - containerPort: 80
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: internal-lb-nginx-service
+  namespace: nginx-apps-int-not-istio
+  annotations:
+    cloud.google.com/load-balancer-type: "Internal"
+spec:
+  type: LoadBalancer
+  selector:
+    app: nginx-int-not-istio
+  ports:
+    - name: http  
+      port: 80
+      targetPort: 80
+      protocol: TCP

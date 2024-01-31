@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nginx-apps-public
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx1-deployment
+  namespace: nginx-apps-public
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx1-app
+  template:
+    metadata:
+      labels:
+        app: nginx1-app
+    spec:
+      containers:
+      - name: nginx-public
+        image: nginx:1.14
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx1-service
+  namespace: nginx-apps-public
+  # annotations:
+  #  NO spec = external
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http-traffic
+  selector:
+    app: nginx1-app
