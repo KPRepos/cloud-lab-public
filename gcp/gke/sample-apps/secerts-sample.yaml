@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-app
+spec:
+  serviceAccountName: my-service-account # this refers to a k8s serviceaccount object that contains the iam.gke.io/gcp-service-account annotation that must be bound to the gcp service account. 
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-app
+        image: my-app:latest
+        volumeMounts:
+        - name: secrets
+          mountPath: /secrets
+      volumes:
+      - name: secrets
+        csi:
+          driver: secrets-store.csi.k8s.io
+          readOnly: true
+              volumeAttributes:
+                secretProviderClass: "secret"
+
