@@ -1,9 +1,16 @@
 
 ## Deploys GCP VPC and GKE infra for GKE lab 
 
-### Copy -  modify terraform.tfvars and update values
+Prereq:- 
 
+### Modify terraform.tfvars and update values
 
+### Update provider.tf file  with project and backend info if needed. 
+
+Run:- 
+
+`terraform init` 
+`terraform apply`
 
 #### Example commands
 
