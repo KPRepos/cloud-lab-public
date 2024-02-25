@@ -9,7 +9,7 @@
 #### Steps:-
 
 1) Update `deploy-fule.auto.tfvars` per requirement
-2) Run `terraform plan`, validate and apply via `terraform apply`
+2) Run `terraform init`, `terraform plan`, validate and apply via `terraform apply`
 3) Login to AWS console, ec2-->instance--> k8-ct1-->connect->Sessionmanager
    
    if have aws tools locally installed, also via cli 
