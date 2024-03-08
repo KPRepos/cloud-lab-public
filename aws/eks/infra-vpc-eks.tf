@@ -165,7 +165,7 @@ module "eks" {
 
   eks_managed_node_groups = {
     # blue = {}
-    ng1 = {
+    "${var.nodegroup-name}-${var.cluster-name}" = {
       min_size     = var.min_size
       max_size     = var.max_size
       desired_size = var.desired_size
@@ -438,38 +438,5 @@ resource "aws_security_group_rule" "Custom_Security_Group_Rule_for_alb" {
 
 data "tls_certificate" "cluster" {
   url = module.eks.cluster_oidc_issuer_url
-}
-
-resource "aws_iam_role" "eks-service-account-role" {
-  name = "${var.cluster-name}-workload_sa"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = ["sts:AssumeRoleWithWebIdentity"]
-        Effect = "Allow"
-        Sid    = ""
-        Principal = {
-          Federated = module.eks.oidc_provider_arn
-        }
-      },
-    ]
-  })
-
-  inline_policy {
-    name = "eks_service_account_policy"
-
-    policy = jsonencode({
-      Version = "2012-10-17"
-      Statement = [
-        {
-          Action   = ["s3:GetBucket", "s3:GetObject", "s3:PutObject"]
-          Effect   = "Allow"
-          Resource = "*"
-        },
-      ]
-    })
-  }
 }
 
