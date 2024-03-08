@@ -5,6 +5,27 @@ variable "cluster-name" {
   description = "The name of your EKS Cluster"
 }
 
+variable "nodegroup-name" {
+  # default     = "eks-lab"
+  type        = string
+  description = "The name of your EKS Node Group"
+  default     = "ng1"
+}
+
+variable "deploy_pod_service_account" {
+  # default     = "eks-lab"
+  type        = string
+  description = "deploy a sample Pos SA ?"
+}
+
+
+variable "sample_pod_service_account_name" {
+  # default     = "eks-lab"
+  type        = string
+  description = "The name of your sample_pod_service_account"
+}
+
+
 variable "region" {
   # default     = "us-west-2"
   type        = string
