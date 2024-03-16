@@ -26,6 +26,18 @@ variable "sample_pod_service_account_name" {
 }
 
 
+variable "deploy_pod_identity" {
+  type        = string
+  description = "pod_identity_deploy ?"
+}
+
+
+variable "pod_identity_role_name" {
+  type        = string
+  description = "The name of your pod_identity role"
+}
+
+
 variable "region" {
   # default     = "us-west-2"
   type        = string
