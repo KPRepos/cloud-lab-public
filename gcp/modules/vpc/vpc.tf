@@ -1,11 +1,11 @@
 resource "google_compute_network" "vpc_network" {
-  name                    = var.vpc_name
+  name                    = "${var.vpc_name}-${var.env_name}"
   auto_create_subnetworks = false
   project                 = var.project_id
 }
 
 resource "google_compute_subnetwork" "private_subnet_1" {
-  name          = "private-subnet-1"
+  name          = "${var.env_name}-private-subnet-1"
   ip_cidr_range = "10.0.1.0/24"
   region        = var.region
   network       = google_compute_network.vpc_network.id
@@ -22,7 +22,7 @@ resource "google_compute_subnetwork" "private_subnet_1" {
 
 
 resource "google_compute_subnetwork" "public_subnet_1" {
-  name          = "public-subnet-1"
+  name          = "${var.env_name}-public-subnet-1"
   ip_cidr_range = "10.0.2.0/24"
   region        = var.region
   network       = google_compute_network.vpc_network.id
@@ -31,7 +31,7 @@ resource "google_compute_subnetwork" "public_subnet_1" {
 
 
 resource "google_compute_firewall" "public_ingress_from_internet" {
-  name    = "public-ingress-from-internet"
+  name    = "${var.env_name}-public-ingress-from-internet"
   network = google_compute_network.vpc_network.name
 
   allow {
@@ -50,7 +50,7 @@ resource "google_compute_firewall" "public_ingress_from_internet" {
 
 
 resource "google_compute_firewall" "allow-ssh" {
-  name = "allow-ssh"
+  name = "${var.env_name}-allow-ssh"
   # project = "devops-counsel-demo"
   network = google_compute_network.vpc_network.id
   allow {
@@ -62,7 +62,7 @@ resource "google_compute_firewall" "allow-ssh" {
 
 
 resource "google_compute_firewall" "allow-internal" {
-  name    = "allow-internal"
+  name    = "${var.env_name}-allow-internal"
   project = var.project_id
   network = google_compute_network.vpc_network.id
   allow {
@@ -81,14 +81,14 @@ resource "google_compute_firewall" "allow-internal" {
 
 
 resource "google_compute_router" "cloud_router" {
-  name    = "cloud-router"
+  name    = "${var.env_name}-cloud-router"
   region  = var.region
   network = google_compute_network.vpc_network.id # Replace with your VPC name
 }
 
 resource "google_compute_router_nat" "cloud_nat" {
   count                              = var.enable_cloud_nat ? 1 : 0
-  name                               = "cloud-nat"
+  name                               = "${var.env_name}-cloud-nat"
   router                             = google_compute_router.cloud_router.name
   region                             = var.region
   nat_ip_allocate_option             = "AUTO_ONLY"
