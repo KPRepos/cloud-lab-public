@@ -75,6 +75,11 @@ variable "name" {
   type        = string
 }
 
+variable "env_name" {
+  description = "The name of the cluster"
+  type        = string
+}
+
 
 variable "cluster_secondary_range_name" {
   description = "The name of the secondary range within the subnetwork for the cluster to use"

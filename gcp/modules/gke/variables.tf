@@ -293,3 +293,9 @@ variable "identity_namespace" {
   default     = null
   type        = string
 }
+
+
+variable "env_name" {
+  description = "The name of the cluster"
+  type        = string
+}

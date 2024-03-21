@@ -1,6 +1,6 @@
 resource "google_secret_manager_secret" "secret-basic" {
   depends_on = [google_project_service.secrets_manager]
-  secret_id  = "secret"
+  secret_id  = "${var.env_name}-secret"
 
   labels = {
     label = "gke-secrets"

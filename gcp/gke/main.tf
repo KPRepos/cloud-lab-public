@@ -1,18 +1,18 @@
 
 module "vpc" {
-  source = "../modules/vpc"
-
+  source           = "../modules/vpc"
   project_id       = var.project_id
   vpc_name         = var.vpc_name
   region           = var.region
   enable_cloud_nat = var.enable_cloud_nat
+  env_name         = var.env_name
 
 }
 
 
 module "gke" {
-  source = "../modules/gke"
-
+  source                            = "../modules/gke"
+  env_name                          = var.env_name
   project_id                        = var.project_id
   project                           = var.project
   region                            = var.region

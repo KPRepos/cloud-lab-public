@@ -1,5 +1,5 @@
 resource "google_service_account" "gke_node" {
-  account_id   = "gke-node-sa"
+  account_id   = "${var.env_name}-gke-node-sa"
   display_name = "GKE Node Service Account"
 }
 

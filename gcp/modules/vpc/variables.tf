@@ -21,3 +21,8 @@ variable "enable_cloud_nat" {
   type    = string
   default = "false"
 }
+
+variable "env_name" {
+  description = "The name of the cluster"
+  type        = string
+}
