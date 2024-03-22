@@ -18,6 +18,15 @@ while ! command -v aws &> /dev/null; do
 done
 
 echo "AWS CLI is already installed."
+## Tools
+
+apt-get install apt-transport-https gnupg curl -y
+curl -fsSL https://baltocdn.com/helm/signing.asc | sudo apt-key add -
+echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+apt-get update -y
+apt-get install helm -y
+apt-get install jq -y
+
 
 
 # Disable swap
@@ -70,10 +79,11 @@ systemctl enable containerd
 
 
 # Add the Kubernetes GPG key
-curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /etc/apt/keyrings/kubernetes-archive-keyring.gpg
-
+curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 # Add the Kubernetes repository
-echo "deb [signed-by=/etc/apt/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list
+
+echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+
 
 # Update the package list
 apt-get update

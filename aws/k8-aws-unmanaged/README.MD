@@ -8,13 +8,15 @@
 
 #### Steps:-
 
-1) Update `deploy-fule.auto.tfvars` per requirement
+1) Update `deploy-file.auto.tfvars` per requirement
 2) Run `terraform init`, `terraform plan`, validate and apply via `terraform apply`
 3) Login to AWS console, ec2-->instance--> k8-ct1-->connect->Sessionmanager
    
    if have aws tools locally installed, also via cli 
 
-   aws ssm start-session --target $(aws ec2 describe-instances --filters "Name=tag:Name,Values=k8-ct1" --query "Reservations[*].Instances[*].InstanceId" --output text)
+   aws ssm start-session --target $(aws ec2 describe-instances --filters "Name=tag:Name,Values=k8-ct1" "Name=instance-state-name,Values=running,pending,stopping,stopped" --query "Reservations[*].Instances[*].InstanceId" --output text)
+
+   # https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html
 
 4) Access k8admin user and run kubectl 
 
@@ -38,6 +40,10 @@
 sudo cat /var/log/cloud-init-output.log
 sudo tail -f /var/log/cloud-init-output.log
 3) Classic LB for now as nlb not required for lab testing
+
+### CloudInit Troubleshooting Steps
+
+1) cat /var/log/cloud-init-output.log
 
 
 
