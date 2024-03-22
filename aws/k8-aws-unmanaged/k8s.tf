@@ -135,6 +135,7 @@ resource "aws_launch_configuration" "worker_lc" {
   }
   # If using spot instances
   spot_price = var.capacity_type == "SPOT" ? "0.0031" : null
+  depends_on = [aws_instance.ct1]
   # Uncomment this if you have a specific key name you want to use
   # key_name = "2023-key"
 }
