@@ -73,8 +73,8 @@ resource "aws_iam_role_policy_attachment" "ssm-policy" {
 #Creating a AWS secret 
 
 resource "aws_secretsmanager_secret" "k8_ct_auth_key" {
-  name = "k8_ct_auth_key"
-  # description             = "Triggered by ${random_pet.instance_recreate_trigger.id}"
+  name                    = "k8_ct_auth_key"
+  description             = "Kubernetes join command for worker nodes"
   recovery_window_in_days = 0
   # Depend on the null_resource to ensure recreation when the instance is recreated
   # depends_on = [null_resource.instance_recreate_trigger]
@@ -135,11 +135,13 @@ resource "aws_launch_configuration" "worker_lc" {
   }
   # If using spot instances
   spot_price = var.capacity_type == "SPOT" ? "0.0031" : null
+  depends_on = [aws_instance.ct1]
   # Uncomment this if you have a specific key name you want to use
   # key_name = "2023-key"
 }
 
 resource "aws_autoscaling_group" "worker_asg" {
+  name                 = "k8-worker-asg"
   desired_capacity     = var.worker_nodes_count
   max_size             = var.worker_nodes_count + 0 // You can set this to what you consider a sensible maximum
   min_size             = var.worker_nodes_count
@@ -150,6 +152,14 @@ resource "aws_autoscaling_group" "worker_asg" {
     key                 = "Name"
     value               = "worker-node"
     propagate_at_launch = true
+  }
+
+  instance_refresh {
+    strategy = "Rolling"
+    # preferences {
+    #   instance_warmup        = 300
+    #   min_healthy_percentage = 50
+    # }
   }
 
   depends_on = [aws_instance.ct1]
