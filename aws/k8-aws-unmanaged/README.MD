@@ -16,7 +16,7 @@
 
    aws ssm start-session --target $(aws ec2 describe-instances --filters "Name=tag:Name,Values=k8-ct1" "Name=instance-state-name,Values=running,pending,stopping,stopped" --query "Reservations[*].Instances[*].InstanceId" --output text)
 
-   # https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html
+   ### https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-install-plugin.html
 
 4) Access k8admin user and run kubectl 
 
