@@ -11,17 +11,11 @@
 
 ### Update Cluster to use API Mode along with Config mode
 
-`aws eks update-cluster-config \
-  --name eks-lab1 \
-  --region us-west-2 \
-  --access-config authenticationMode=API_AND_CONFIG_MAP`
+`aws eks update-cluster-config --name eks-lab1 --region us-west-2 --access-config authenticationMode=API_AND_CONFIG_MAP`
 
 ### Check Status 
 
-`aws eks describe-cluster \
-  --name eks-lab1 \
-  --region us-west-2 \
-  --query "cluster.status"`
+`aws eks describe-cluster --name eks-lab1 --region us-west-2 --query "cluster.status"`
 
 ### Add Entry 
 
