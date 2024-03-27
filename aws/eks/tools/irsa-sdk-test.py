@@ -1,8 +1,22 @@
 # Make sure all required tools installed 
 # apt update -y && apt install awscli less jq python3 python3-pip vim -y
 # apt install python3-boto3 (or) pip3 install boto3
+# update AWS_ROLE_ARN to IRSA ARN to force script to use for testing
+
 import boto3
 import argparse
+import os
+import logging
+
+# Enable Boto3 logging
+#boto3.set_stream_logger('', logging.DEBUG)
+
+print("Boto3 version:", boto3.__version__)
+
+# Explicitly specify the web identity token file and role ARN (optional, should not be necessary with IRSA)
+os.environ['AWS_WEB_IDENTITY_TOKEN_FILE'] = '/var/run/secrets/eks.amazonaws.com/serviceaccount/token'
+os.environ['AWS_ROLE_ARN'] = 'arn:aws:iam::1234567890:role/ngnix-pod-service-account'
+
 
 def check_access(service_name, check_function, successes):
     print(f"Executing: Check for {service_name}")
