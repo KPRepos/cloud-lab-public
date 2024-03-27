@@ -11,7 +11,7 @@
 
 `cd aws/eks` - [https://github.com/KPRepos/cloud-lab-public/tree/main/aws/eks#readme](aws/eks/README.MD)
 
-EKS deployment includes examples for AWS LB, IRSA, EKS-Pod-Identity, ArgoCD
+EKS deployment includes examples for AWS LB, IRSA, EKS-Pod-Identity, EKS-access-management-controls and ArgoCD
 
 
 #####  Deploy UnManaged K8 in AWS 
