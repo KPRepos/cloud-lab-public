@@ -11,21 +11,23 @@
 
 ### Update Cluster to use API Mode along with Config mode
 
-aws eks update-cluster-config \
+`aws eks update-cluster-config \
   --name eks-lab1 \
   --region us-west-2 \
-  --access-config authenticationMode=API_AND_CONFIG_MAP
+  --access-config authenticationMode=API_AND_CONFIG_MAP`
 
 ### Check Status 
 
-aws eks describe-cluster \
+`aws eks describe-cluster \
   --name eks-lab1 \
   --region us-west-2 \
-  --query "cluster.status"
+  --query "cluster.status"`
 
 ### Add Entry 
 
-aws eks create-access-entry --cluster-name eks-lab1 --principal-arn "arn:aws:iam::1234567890:role/aws-reserved/sso.amazonaws.com/us-west-2/AWSReservedSSO_AWSPowerUserAccess_11111aaaaaa"
+`aws eks create-access-entry --cluster-name eks-lab1 --principal-arn "arn:aws:iam::1234567890:role/aws-reserved/sso.amazonaws.com/us-west-2/AWSReservedSSO_AWSPowerUserAccess_11111aaaaaa"`
 
-aws eks associate-access-policy --cluster-name eks-lab1 --principal-arn "arn:aws:iam::1234567890:role/aws-reserved/sso.amazonaws.com/us-west-2/AWSReservedSSO_AWSPowerUserAccess_11111aaaaaa" --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy --access-scope type=cluster
+### Associate Policy 
+
+`aws eks associate-access-policy --cluster-name eks-lab1 --principal-arn "arn:aws:iam::1234567890:role/aws-reserved/sso.amazonaws.com/us-west-2/AWSReservedSSO_AWSPowerUserAccess_11111aaaaaa" --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy --access-scope type=cluster`
 
