@@ -1,6 +1,6 @@
 # Make sure all required tools installed 
 # apt update -y && apt install awscli less jq python3 python3-pip vim -y
-# pip3 install boto3
+# apt install python3-boto3 (or) pip3 install boto3
 import boto3
 import argparse
 
