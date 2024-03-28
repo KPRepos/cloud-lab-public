@@ -8,7 +8,38 @@ for ns in $(kubectl get ns --no-headers | egrep -v "kube-system|kube-node-lease|
   done
 done
 
-###
+#### Deleting Terminating struck namespaces
+
+# Loop through namespaces, excluding kube-system, kube-node-lease, and kube-public. Check if they are in terminating state.
+for ns in $(kubectl get ns --no-headers | egrep -v "kube-system|kube-node-lease|kube-public" | awk '{print $1}'); do
+    echo "Checking namespace: $ns"
+    
+    # Check the namespace status
+    status=$(kubectl get ns $ns -o jsonpath='{.status.phase}')
+    
+    # If namespace is in Terminating state, clear finalizers
+    if [ "$status" == "Terminating" ]; then
+        echo "Namespace $ns is in Terminating state. Clearing finalizers..."
+        
+        # Start kubectl proxy in background
+        kubectl proxy &
+        proxy_pid=$!
+
+        # Modify the namespace to remove finalizers and update it via the proxy
+        kubectl get namespace $ns -o json | jq '.spec = {"finalizers":[]}' > temp.json
+        curl -k -H "Content-Type: application/json" -X PUT --data-binary @temp.json 127.0.0.1:8001/api/v1/namespaces/$ns/finalize && echo "Finalizers cleared for namespace $ns." || echo "Failed to clear finalizers for namespace $ns"
+
+        # Kill the proxy process
+        kill $proxy_pid
+    else
+        echo "Namespace $ns is not in Terminating state."
+    fi
+done
+
+# Cleanup temp file
+rm -f temp.json
+
+####
 WEBHOOK_NAME="aws-load-balancer-webhook"
 if kubectl get validatingwebhookconfigurations $WEBHOOK_NAME &> /dev/null; then
     echo "Found $WEBHOOK_NAME ValidatingWebhookConfiguration. Deleting..."
