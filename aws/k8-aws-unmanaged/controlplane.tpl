@@ -174,3 +174,7 @@ echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt
 apt-get update -y
 apt-get install helm -y
 
+# Optional - K8 alias 
+echo "alias k='kubectl'" | sudo tee /etc/profile.d/kubectl_alias.sh > /dev/null
+
+
