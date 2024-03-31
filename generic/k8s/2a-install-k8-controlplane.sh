@@ -105,3 +105,4 @@ kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
 echo "Kubernetes setup is complete. Please review any commented out sections relevant to your setup."
 
 # alias k='kubectl'
+echo "alias k='kubectl'" | sudo tee /etc/profile.d/kubectl_alias.sh > /dev/null
