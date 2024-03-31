@@ -27,6 +27,21 @@ curl -k -H "Content-Type: application/json" -X PUT --data-binary @temp.json 127.
 
 ### Proxy
 
-## Node Labels 
+#### Node Labels 
 
 kubectl label nodes k8-n2-homelab name=k8-n2-homelab
+
+#### Kubectl
+systemctl status kubelet
+journalctl -u kubelet -xe
+
+#### Calico
+
+kubectl logs -n kube-system calico-node-xxxxx -c calico-node
+kubectl logs -n kube-system calico-node-xxxxx -c calico-node --previous
+
+
+
+
+
+
