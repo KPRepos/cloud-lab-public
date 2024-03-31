@@ -17,7 +17,7 @@ sleep 10
 
 # Disable swap
 swapoff -a
-sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+sed -i '/swap.img/ s/^/#/' /etc/fstab
 
 # Load necessary modules
 cat <<EOF | tee /etc/modules-load.d/containerd.conf
