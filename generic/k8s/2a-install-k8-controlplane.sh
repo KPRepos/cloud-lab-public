@@ -11,7 +11,7 @@ apt-get install helm -y
 apt-get install jq -y
 apt-get install apt-transport-https gnupg curl -y
 apt-get install helm -y
-
+apt-get install nfs-common
 sleep 10
 
 
