@@ -20,11 +20,22 @@ read -p "Enter subnet mask in CIDR notation (e.g., /24): " subnet_mask
 # Ask for the DNS servers, comma-separated
 read -p "Enter DNS servers separated by comma (e.g., 8.8.8.8,8.8.4.4): " dns_servers
 
+# Ask for the Gateway IP
+read -p "Enter Gateway IP  " gateway_ip
+
 # Change hostname permanently
 hostnamectl set-hostname $new_hostname
 
-# Backup current netplan configuration
-sudo cp /etc/netplan/01-netcfg.yaml /etc/netplan/01-netcfg.yaml.backup
+# Specify the directory where your netcfg files are located
+directory="/etc/netplan/"
+
+# Iterate over files matching the pattern *netcfg*
+for file in "$directory"/*netcfg*; do
+    if [ -f "$file" ]; then
+        echo "Backing up $file"
+        sudo cp "$file" "$file.backup"
+    fi
+done
 
 
 # Create new netplan configuration
@@ -38,6 +49,10 @@ network:
       addresses: [$static_ip$subnet_mask]
       nameservers:
         addresses: [${dns_servers//,/, }]
+      routes:
+        - to: default
+          via: $gateway_ip
+          on-link: true 
 EOT
 
 # $sudo chmod 600 /etc/netplan/01-netcfg.yaml
@@ -56,3 +71,5 @@ read -p "Configuration updated. Do you want to reboot now? (y/n): " confirm_rebo
 if [[ $confirm_reboot =~ ^[Yy]$ ]]; then
     echo "hi"
 fi
+
+
