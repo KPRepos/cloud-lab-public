@@ -212,12 +212,11 @@ data "google_container_engine_versions" "location" {
 
 
 
-
 # Separately Managed Node Pool
 resource "google_container_node_pool" "primary_nodes_zone1" {
   depends_on = [google_project_service.kubernetes_engine]
   # count    = 0
-  name     = google_container_cluster.primary.name
+  name     = "${google_container_cluster.primary.name}-primary"
   location = var.region
   # # zone    = "us-west3-a"
   cluster = google_container_cluster.primary.name
@@ -236,6 +235,7 @@ resource "google_container_node_pool" "primary_nodes_zone1" {
     oauth_scopes = [
       "https://www.googleapis.com/auth/logging.write",
       "https://www.googleapis.com/auth/monitoring",
+      "https://www.googleapis.com/auth/devstorage.read_only"
     ]
 
     labels = {
@@ -245,7 +245,7 @@ resource "google_container_node_pool" "primary_nodes_zone1" {
     disk_size_gb    = 50
     local_ssd_count = 0
     disk_type       = "pd-standard" #to get around gcp limits with ssd 
-    preemptible     = var.preemptible_spot
+    preemptible     = var.preemptible_spot_primary
     machine_type    = var.primary_node_pool_machine_type
     tags            = ["gke-node", "${var.project_id}-gke"]
     metadata = {
@@ -254,18 +254,17 @@ resource "google_container_node_pool" "primary_nodes_zone1" {
   }
 }
 
-
-
-
+# serviceAccounts[0].scopes[0]: https://www.googleapis.com/auth/devstorage.read_only
+# serviceAccounts[0].scopes[0]: https://www.googleapis.com/auth/cloud-platform
 
 
 # Separately Managed Node Pool
 resource "google_container_node_pool" "primary_nodes_zone2" {
+  count      = var.deploy_secondary_node_pool ? 1 : 0
   depends_on = [google_project_service.kubernetes_engine]
-  count      = 0
-  name       = "kp-lab-k8-nodepool-2"
+  name       = "${google_container_cluster.primary.name}-secondary"
   location   = var.region
-  # # zone    = "us-west3-a"
+  # zone    = "us-west3-a"
   cluster = google_container_cluster.primary.name
 
   # version    = data.google_container_engine_versions.gke_version.release_channel_latest_version["STABLE"]
@@ -280,6 +279,7 @@ resource "google_container_node_pool" "primary_nodes_zone2" {
     oauth_scopes = [
       "https://www.googleapis.com/auth/logging.write",
       "https://www.googleapis.com/auth/monitoring",
+      "https://www.googleapis.com/auth/devstorage.read_only"
     ]
 
     labels = {
@@ -289,8 +289,9 @@ resource "google_container_node_pool" "primary_nodes_zone2" {
     disk_size_gb    = 50
     local_ssd_count = 0
     disk_type       = "pd-standard" #to get around gcp limits with ssd 
+    preemptible     = var.preemptible_spot_secondary
     # preemptible  = true
-    machine_type = "n1-standard-1"
+    machine_type = var.primary_node_pool_machine_type
     tags         = ["gke-node", "${var.project_id}-gke"]
     metadata = {
       disable-legacy-endpoints = "true"

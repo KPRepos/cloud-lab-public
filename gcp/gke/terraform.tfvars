@@ -1,5 +1,5 @@
-project_id                       = "kprepos-lab"
-project                          = "kprepos-lab"
+project_id                       = "Project-id"
+project                          = "Project-name"
 region                           = "us-west1"
 location                         = "us-west1"
 zone1                            = "us-west1-a"
@@ -12,10 +12,10 @@ enable_dataplane_v2              = true
 enable_network_policy            = false # have to be false when dataplane-v2 enabled
 version_nodepool                 = "1.26.8-gke.200"
 version_cluster                  = "1.26.8-gke.200"
-primary_node_pool_min_node_count = 1
-primary_node_pool_max_node_count = 1
+primary_node_pool_min_node_count = 2
+primary_node_pool_max_node_count = 2
 primary_node_pool_machine_type   = "n2-standard-2"
-preemptible_spot                 = true
+preemptible_spot_primary         = true
 enable_private_nodes             = true
 #Local Public IP of terminal will automatically added to this, below list is additional 
 master_authorized_networks_config = [{
@@ -34,3 +34,11 @@ master_authorized_networks_config = [{
 vpc_name         = "gke-lab-vpc"
 enable_cloud_nat = true # to provide Egress access to GKE nodes, NAt is expensive - Set to false if not required. 
 env_name         = "test2"
+
+
+#### Additional Node-Pool
+deploy_secondary_node_pool         = true
+secondary_node_pool_min_node_count = 1
+secondary_node_pool_machine_type   = 1
+secondary_node_pool_max_node_count = "n2-standard-2"
+preemptible_spot_secondary         = true
