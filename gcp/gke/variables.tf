@@ -55,8 +55,32 @@ variable "primary_node_pool_max_node_count" {
   default = 1
 }
 
-variable "preemptible_spot" {
+
+variable "secondary_node_pool_min_node_count" {
+  default = 0
+}
+
+variable "secondary_node_pool_machine_type" {
+  default = ""
+  type    = string
+}
+
+variable "secondary_node_pool_max_node_count" {
+  default = 1
+}
+
+variable "deploy_secondary_node_pool" {
   default = false
+}
+
+
+variable "preemptible_spot_primary" {
+  default = true
+}
+
+
+variable "preemptible_spot_secondary" {
+  default = true
 }
 
 
