@@ -42,22 +42,25 @@ locals {
 
   tags = {
     Example    = local.name
-    GithubRepo = "terraform-aws-eks"
+    GithubRepo = "terraform-aws-eks-20-8-4"
     GithubOrg  = "terraform-aws-modules"
   }
 }
 
 ################################################################################
-# EKS Module
+# EKS Module 20.8.4
 ################################################################################
 
 module "eks" {
-  source                               = "./modules/terraform-aws-eks"
+  source                          = "./modules/terraform-aws-eks"
+  cluster_name                    = "${var.cluster-name}-${var.env_name}"
+  include_oidc_root_ca_thumbprint = false
+  custom_oidc_thumbprints = [
+    "9e99a48a9960b14926bb7f3b02e22da2b0ab7280"
+  ]
   cluster_version                      = var.cluster_version
-  cluster_name                         = var.cluster-name
   cluster_endpoint_public_access       = true
   cluster_endpoint_public_access_cidrs = concat(var.cluster_endpoint_public_access_cidrs, ["${local.public_ip}/32"])
-
   cluster_addons = {
     coredns = {
       preserve    = true
@@ -165,7 +168,7 @@ module "eks" {
 
   eks_managed_node_groups = {
     # blue = {}
-    "${var.nodegroup-name}-${var.cluster-name}" = {
+    "${var.cluster-name}-${var.nodegroup-name}-${var.env_name}" = {
       min_size     = var.min_size
       max_size     = var.max_size
       desired_size = var.desired_size
@@ -174,8 +177,8 @@ module "eks" {
       capacity_type  = var.capacity_type
       labels = {
         Environment = var.env_name
-        GithubRepo  = "terraform-aws-eks"
-        GithubOrg   = "terraform-aws-modules"
+        # GithubRepo  = "terraform-aws-eks"
+        # GithubOrg   = "terraform-aws-modules"
       }
 
       taints = {
@@ -195,9 +198,27 @@ module "eks" {
       # }
     }
   }
+  enable_cluster_creator_admin_permissions = var.enable_cluster_creator_admin_permissions
+  #aws-auth configmap
+  # create_aws_auth_configmap = true
+  authentication_mode = "API_AND_CONFIG_MAP"
+  # access_entries = {
+  #   # One access entry with a policy associated
+  #   example = {
+  #     kubernetes_groups = []
+  #     principal_arn     = var.iam_role_arn
 
-  # aws-auth configmap
-  manage_aws_auth_configmap = false
+  #     policy_associations = {
+  #       example = {
+  #         policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+  #         access_scope = {
+  #           namespaces = []
+  #           type       = "cluster"
+  #         }
+  #       }
+  #     }
+  #   }
+  # }
 
 
   tags = local.tags
@@ -259,7 +280,7 @@ resource "aws_security_group" "additional" {
 }
 
 resource "aws_iam_policy" "additional" {
-  name = "${local.name}-additional"
+  name = "${var.cluster-name}--additional-eks-policy-${local.name}"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -291,7 +312,7 @@ module "kms" {
 module "lb_role" {
   source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
 
-  role_name                              = "${var.env_name}_eks_lb"
+  role_name                              = "${var.env_name}-aws-load-balancer-controller"
   attach_load_balancer_controller_policy = true
 
   oidc_providers = {
@@ -309,10 +330,14 @@ provider "helm" {
     exec {
       api_version = "client.authentication.k8s.io/v1beta1"
       args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name]
-      command     = "aws"
+      # args    = ["eks", "get-token", "--region", var.region, "--cluster-name", module.eks.cluster_name, "--output", "json"]
+      command = "aws"
     }
   }
 }
+
+
+
 
 resource "kubernetes_service_account" "service-account" {
   metadata {
@@ -323,19 +348,26 @@ resource "kubernetes_service_account" "service-account" {
       "app.kubernetes.io/component" = "controller"
     }
     annotations = {
-      "eks.amazonaws.com/role-arn"               = module.lb_role.iam_role_arn
-      "eks.amazonaws.com/sts-regional-endpoints" = "true"
+      "eks.amazonaws.com/role-arn" = module.lb_role.iam_role_arn
+      # "eks.amazonaws.com/sts-regional-endpoints" = "true"
     }
   }
+  depends_on = [
+    module.eks
+  ]
 }
 
+
+# https://github.com/aws/eks-charts/blob/master/stable/aws-load-balancer-controller/Chart.yaml
 resource "helm_release" "lb" {
   count      = var.deploy_eks_alb_controller == "yes" ? 1 : 0
   name       = "aws-load-balancer-controller"
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
+  version    = "1.7.0"
   depends_on = [
+    module.eks,
     kubernetes_service_account.service-account
   ]
 
@@ -344,10 +376,10 @@ resource "helm_release" "lb" {
     value = var.region
   }
 
-  set {
-    name  = "vpcId"
-    value = module.vpc.vpc_id
-  }
+  # set {
+  #   name  = "vpcId"
+  #   value = module.vpc.vpc_id
+  # }
 
   set {
     name  = "image.repository"
@@ -436,7 +468,9 @@ resource "aws_security_group_rule" "Custom_Security_Group_Rule_for_alb" {
 
 
 
-data "tls_certificate" "cluster" {
-  url = module.eks.cluster_oidc_issuer_url
-}
+# data "tls_certificate" "cluster" {
+#   url = module.eks.cluster_oidc_issuer_url
+# }
+
+
 

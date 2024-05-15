@@ -52,6 +52,30 @@ output "cluster_primary_security_group_id" {
   value       = try(aws_eks_cluster.this[0].vpc_config[0].cluster_security_group_id, null)
 }
 
+output "cluster_service_cidr" {
+  description = "The CIDR block where Kubernetes pod and service IP addresses are assigned from"
+  value       = try(aws_eks_cluster.this[0].kubernetes_network_config[0].service_ipv4_cidr, aws_eks_cluster.this[0].kubernetes_network_config[0].service_ipv6_cidr, null)
+}
+
+output "cluster_ip_family" {
+  description = "The IP family used by the cluster (e.g. `ipv4` or `ipv6`)"
+  value       = try(aws_eks_cluster.this[0].kubernetes_network_config[0].ip_family, null)
+}
+
+################################################################################
+# Access Entry
+################################################################################
+
+output "access_entries" {
+  description = "Map of access entries created and their attributes"
+  value       = aws_eks_access_entry.this
+}
+
+output "access_policy_associations" {
+  description = "Map of eks cluster access policy associations created and their attributes"
+  value       = aws_eks_access_policy_association.this
+}
+
 ################################################################################
 # KMS Key
 ################################################################################
@@ -143,7 +167,7 @@ output "cluster_iam_role_unique_id" {
 
 output "cluster_addons" {
   description = "Map of attribute maps for all EKS cluster addons enabled"
-  value       = aws_eks_addon.this
+  value       = merge(aws_eks_addon.this, aws_eks_addon.before_compute)
 }
 
 ################################################################################
@@ -204,20 +228,4 @@ output "self_managed_node_groups" {
 output "self_managed_node_groups_autoscaling_group_names" {
   description = "List of the autoscaling group names created by self-managed node groups"
   value       = compact([for group in module.self_managed_node_group : group.autoscaling_group_name])
-}
-
-################################################################################
-# Additional
-################################################################################
-
-output "aws_auth_configmap_yaml" {
-  description = "[DEPRECATED - use `var.manage_aws_auth_configmap`] Formatted yaml output for base aws-auth configmap containing roles used in cluster node groups/fargate profiles"
-  value = templatefile("${path.module}/templates/aws_auth_cm.tpl",
-    {
-      eks_managed_role_arns                   = distinct(compact([for group in module.eks_managed_node_group : group.iam_role_arn]))
-      self_managed_role_arns                  = distinct(compact([for group in module.self_managed_node_group : group.iam_role_arn if group.platform != "windows"]))
-      win32_self_managed_role_arns            = distinct(compact([for group in module.self_managed_node_group : group.iam_role_arn if group.platform == "windows"]))
-      fargate_profile_pod_execution_role_arns = distinct(compact([for group in module.fargate_profile : group.fargate_profile_pod_execution_role_arn]))
-    }
-  )
 }

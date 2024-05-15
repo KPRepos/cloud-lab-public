@@ -1,3 +1,11 @@
+resource "kubernetes_namespace" "argocd" {
+  count = var.enable_argocd_helm_release ? 1 : 0
+  metadata {
+    name = var.argocd_k8s_namespace
+  }
+}
+
+
 resource "helm_release" "argocd" {
   count            = var.enable_argocd_helm_release ? 1 : 0
   name             = var.argocd_helm_release_name
@@ -6,8 +14,19 @@ resource "helm_release" "argocd" {
   chart            = var.argocd_helm_chart
   version          = var.argocd_helm_chart_version
   timeout          = var.argocd_helm_chart_timeout_seconds
-  create_namespace = true
+  create_namespace = false
+  set {
+    name  = "installCRDs"
+    value = true
+  }
 
+  set {
+    name  = "crds.install"
+    value = true
+  }
+
+
+  depends_on = [kubernetes_namespace.argocd]
 
   # Additional Helm values
   # Enable if you want to install high-availability argocd
@@ -79,12 +98,55 @@ variable "auto_deploy_sample_apps" {
 
 ## 
 resource "null_resource" "argocd_wait" {
+  count      = var.enable_argocd_helm_release ? 1 : 0
   depends_on = [helm_release.argocd]
 
   provisioner "local-exec" {
     command = "until kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -o jsonpath='{.items[0].status.phase}' | grep Running; do echo 'waiting for argocd-server to be ready' && sleep 10; done"
   }
 }
+
+# ## 
+# resource "null_resource" "argocd_crds_wait" {
+#   count      = var.enable_argocd_helm_release ? 1 : 0
+#   depends_on = [helm_release.argocd]
+
+#   provisioner "local-exec" {
+#     command = "until kubectl get pods -n argocd -l app.kubernetes.io/name=argocd-server -o jsonpath='{.items[0].status.phase}' | grep Running; do echo 'waiting for argocd-server to be ready' && sleep 10; done"
+#   }
+# }
+
+
+# resource "kubernetes_manifest" "argo_cd_crds" {
+#   count = var.enable_argocd_helm_release ? 1 : 0
+#   manifest = {
+#     apiVersion = "apiextensions.k8s.io/v1"
+#     kind       = "CustomResourceDefinition"
+#     metadata = {
+#       name = "applications.argoproj.io"
+#     }
+#     spec = {
+#       group = "argoproj.io"
+#       versions = [
+#         {
+#           name    = "v1alpha1"
+#           served  = true
+#           storage = true
+#         }
+#       ]
+#       scope = "Namespaced"
+#       names = {
+#         plural     = "applications"
+#         singular   = "application"
+#         kind       = "Application"
+#         shortNames = ["app"]
+#       }
+#     }
+#   }
+#   depends_on = [helm_release.argocd]
+# }
+
+
 
 resource "kubernetes_manifest" "argo_app" {
   count = var.auto_deploy_sample_apps ? 1 : 0
@@ -117,8 +179,10 @@ resource "kubernetes_manifest" "argo_app" {
       }
     }
   }
+  depends_on = [helm_release.argocd, null_resource.argocd_wait]
 }
 
+# , kubernetes_manifest.argo_cd_crds
 
 output "argocd_helm_chart_values" {
   value = var.enable_argocd_helm_release ? helm_release.argocd[0].values : null
