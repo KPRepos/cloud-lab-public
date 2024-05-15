@@ -24,33 +24,15 @@ By default, EKS creates a cluster primary security group that is created outside
   attach_cluster_primary_security_group = true # default is false
 ```
 
-2. If you want to use the cluster primary security group, you can disable the tag passed to the node security group by overriding the tag expected value like:
-
-```hcl
-  attach_cluster_primary_security_group = true # default is false
-
-  node_security_group_tags = {
-    "kubernetes.io/cluster/<CLUSTER_NAME>" = null # or any other value other than "owned"
-  }
-```
-
-3. By overriding the tag expected value on the cluster primary security group like:
-
-```hcl
-  attach_cluster_primary_security_group = true # default is false
-
-  cluster_tags = {
-    "kubernetes.io/cluster/<CLUSTER_NAME>" = null # or any other value other than "owned"
-  }
-```
-
-4. By not attaching the cluster primary security group. The cluster primary security group has quite broad access and the module has instead provided a security group with the minimum amount of access to launch an empty EKS cluster successfully and users are encouraged to open up access when necessary to support their workload.
+2. By not attaching the cluster primary security group. The cluster primary security group has quite broad access and the module has instead provided a security group with the minimum amount of access to launch an empty EKS cluster successfully and users are encouraged to open up access when necessary to support their workload.
 
 ```hcl
   attach_cluster_primary_security_group = false # this is the default for the module
 ```
 
 In theory, if you are attaching the cluster primary security group, you shouldn't need to use the shared node security group created by the module. However, this is left up to users to decide for their requirements and use case.
+
+If you choose to use [Custom Networking](https://docs.aws.amazon.com/eks/latest/userguide/cni-custom-network.html), make sure to only attach the security groups matching your choice above in your ENIConfig resources. This will ensure you avoid redundant tags.
 
 ### Why are nodes not being registered?
 
@@ -74,14 +56,6 @@ If you require a public endpoint, setting up both (public and private) and restr
 ### Why are there no changes when a node group's `desired_size` is modified?
 
 The module is configured to ignore this value. Unfortunately, Terraform does not support variables within the `lifecycle` block. The setting is ignored to allow autoscaling via controllers such as cluster autoscaler or Karpenter to work properly and without interference by Terraform. Changing the desired count must be handled outside of Terraform once the node group is created.
-
-### How can I deploy Windows based nodes?
-
-To enable Windows support for your EKS cluster, you will need to apply some configuration manually. See the [Enabling Windows Support (Windows/MacOS/Linux)](https://docs.aws.amazon.com/eks/latest/userguide/windows-support.html#enable-windows-support).
-
-In addition, Windows based nodes require an additional cluster RBAC role (`eks:kube-proxy-windows`).
-
-Note: Windows based node support is limited to a default user data template that is provided due to the lack of Windows support and manual steps required to provision Windows based EKS nodes.
 
 ### How do I access compute resource attributes?
 

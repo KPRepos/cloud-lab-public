@@ -6,7 +6,7 @@ data "aws_availability_zones" "available" {}
 
 locals {
   name            = "ex-${replace(basename(path.cwd), "_", "-")}"
-  cluster_version = "1.24"
+  cluster_version = "1.29"
   region          = "eu-west-1"
 
   vpc_cidr = "10.0.0.0/16"
@@ -35,7 +35,7 @@ module "eks" {
     vpc-cni    = {}
     coredns = {
       configuration_values = jsonencode({
-        computeType = "Fargate"
+        computeType = "fargate"
       })
     }
   }
@@ -54,50 +54,63 @@ module "eks" {
     }
   }
 
-  fargate_profiles = merge(
-    {
-      example = {
-        name = "example"
-        selectors = [
-          {
-            namespace = "backend"
-            labels = {
-              Application = "backend"
-            }
-          },
-          {
-            namespace = "app-*"
-            labels = {
-              Application = "app-wildcard"
-            }
+  fargate_profiles = {
+    example = {
+      name = "example"
+      selectors = [
+        {
+          namespace = "backend"
+          labels = {
+            Application = "backend"
           }
-        ]
-
-        # Using specific subnets instead of the subnets supplied for the cluster itself
-        subnet_ids = [module.vpc.private_subnets[1]]
-
-        tags = {
-          Owner = "secondary"
+        },
+        {
+          namespace = "app-*"
+          labels = {
+            Application = "app-wildcard"
+          }
         }
+      ]
 
-        timeouts = {
-          create = "20m"
-          delete = "20m"
-        }
-      }
-    },
-    { for i in range(3) :
-      "kube-system-${element(split("-", local.azs[i]), 2)}" => {
-        selectors = [
-          { namespace = "kube-system" }
-        ]
-        # We want to create a profile per AZ for high availability
-        subnet_ids = [element(module.vpc.private_subnets, i)]
+      # Using specific subnets instead of the subnets supplied for the cluster itself
+      subnet_ids = [module.vpc.private_subnets[1]]
+
+      tags = {
+        Owner = "secondary"
       }
     }
-  )
+    kube-system = {
+      selectors = [
+        { namespace = "kube-system" }
+      ]
+    }
+  }
 
   tags = local.tags
+}
+
+################################################################################
+# Sub-Module Usage on Existing/Separate Cluster
+################################################################################
+
+module "fargate_profile" {
+  source = "../../modules/fargate-profile"
+
+  name         = "separate-fargate-profile"
+  cluster_name = module.eks.cluster_name
+
+  subnet_ids = module.vpc.private_subnets
+  selectors = [{
+    namespace = "kube-system"
+  }]
+
+  tags = merge(local.tags, { Separate = "fargate-profile" })
+}
+
+module "disabled_fargate_profile" {
+  source = "../../modules/fargate-profile"
+
+  create = false
 }
 
 ################################################################################
@@ -106,7 +119,7 @@ module "eks" {
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 3.0"
+  version = "~> 5.0"
 
   name = local.name
   cidr = local.vpc_cidr
@@ -116,13 +129,8 @@ module "vpc" {
   public_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 48)]
   intra_subnets   = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 52)]
 
-  enable_nat_gateway   = true
-  single_nat_gateway   = true
-  enable_dns_hostnames = true
-
-  enable_flow_log                      = true
-  create_flow_log_cloudwatch_iam_role  = true
-  create_flow_log_cloudwatch_log_group = true
+  enable_nat_gateway = true
+  single_nat_gateway = true
 
   public_subnet_tags = {
     "kubernetes.io/role/elb" = 1
