@@ -109,6 +109,12 @@ variable "desired_size" {
 
 
 
+variable "enable_nat_gateway" {
+  type    = string
+  default = false
+}
+
+
 variable "enable_karpenter" {
   type        = string
   description = "version"
