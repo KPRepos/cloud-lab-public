@@ -12,7 +12,7 @@ enable_cluster_creator_admin_permissions = "true" # Auto Add creater of Cluster 
 policy_arn                               = "eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
 
 
-# Uncomment and Update IAm Role in Principal_arn below to provide EKS Access to IAM Predefined Roles. 
+# # Uncomment and Update IAm Role in Principal_arn below to provide EKS Access to IAM Predefined Roles. 
 # access_entries = {
 #   # One access entry with a policy associated
 #   EKS-Admin-Cluster = {
@@ -34,7 +34,7 @@ policy_arn                               = "eks::aws:cluster-access-policy/Amazo
 
 #     policy_associations = {
 #       EKS-Admin-Global = {
-#         policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+#         policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"
 #         access_scope = {
 #           namespaces = ["*"]
 #           type       = "namespace"
@@ -69,6 +69,8 @@ capacity_type             = "SPOT" #To save Cloud bill while testing
 nodegroup-name            = "ng1"  #node name will be nodegroup-name+Clustername
 
 
+
+
 ##IRSA
 deploy_pod_service_account      = false                       #default access is for ec2* list - Chnage this to more granular for testing
 sample_pod_service_account_name = "ngnix-pod-service-account" #makes sure deploymenet spec is updated with annotation - serviceAccountName: ngnix-pod_service_account
@@ -78,7 +80,14 @@ deploy_pod_identity    = false                   #default access is for ec2* lis
 pod_identity_role_name = "eks-pod-identity-role" #makes sure deploymenet spec is updated with annotation - serviceAccountName: ngnix-pod_service_account
 
 
+
+####### 
+# Ex Tags
 tags = {
-  GithubOrg_ref = "terraform-aws-modules"
+  Github_ref = "Ref-terraform-aws-modules"
+  ExtraTag   = "EKS-tf-example-Code"
 }
 
+
+## VPC  - Required for EKS Nodes Connectivity - Until EKS Nodes have Endpoints for EKS enabled.
+enable_nat_gateway = true

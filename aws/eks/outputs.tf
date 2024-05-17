@@ -211,7 +211,9 @@ output "self_managed_node_groups_autoscaling_group_names" {
 # Additional
 ################################################################################
 
-output "aws_auth_configmap_yaml" {
-  description = "Formatted yaml output for base aws-auth configmap containing roles used in cluster node groups/fargate profiles"
-  value       = module.eks.aws_auth_configmap_yaml
-}
+# output "aws_auth_configmap_yaml" {
+#   description = "Formatted yaml output for base aws-auth configmap containing roles used in cluster node groups/fargate profiles"
+#   value       = module.eks.aws_auth_configmap_yaml
+# }
+
+

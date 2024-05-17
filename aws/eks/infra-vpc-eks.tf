@@ -39,12 +39,12 @@ locals {
 
   vpc_cidr = "10.0.0.0/16"
   azs      = slice(data.aws_availability_zones.available.names, 0, 2)
-
-  tags = {
-    Example    = local.name
-    GithubRepo = "terraform-aws-eks-20-8-4"
-    GithubOrg  = "terraform-aws-modules"
-  }
+  tags     = var.tags
+  # tags = {
+  #   Example    = local.name
+  #   GithubRepo = "terraform-aws-eks-20-8-4"
+  #   GithubOrg  = "terraform-aws-modules"
+  # }
 }
 
 ################################################################################
@@ -194,7 +194,7 @@ module "eks" {
       }
 
       # tags = {
-      #   ExtraTag = "example"
+
       # }
     }
   }
@@ -240,7 +240,7 @@ module "vpc" {
   public_subnets  = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 48)]
   intra_subnets   = [for k, v in local.azs : cidrsubnet(local.vpc_cidr, 8, k + 52)]
 
-  enable_nat_gateway   = true
+  enable_nat_gateway   = var.enable_nat_gateway
   single_nat_gateway   = true
   enable_dns_hostnames = true
 
