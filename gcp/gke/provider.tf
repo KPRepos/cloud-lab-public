@@ -9,6 +9,9 @@ terraform {
   required_version = ">= 0.14"
 }
 
+
 provider "google" {
-  project = "kprepos-lab"
+  project = var.project
 }
+
+

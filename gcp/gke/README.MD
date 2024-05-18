@@ -5,7 +5,9 @@ Prereq:-
 
 ### Modify terraform.tfvars and update values
 
-### Update provider.tf file  with project and backend info if needed. 
+`mv terraform.tfvars.sample terraform.tfvars`
+
+### Update terraform.tfvars  with project name and ID
 
 Run:- 
 
