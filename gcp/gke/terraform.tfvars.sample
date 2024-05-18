@@ -1,5 +1,8 @@
-project_id                       = "Project-id"
-project                          = "Project-name"
+##Update below 
+project_id = "project_id"
+project    = "Project_name"
+
+##Optional - Update below 
 region                           = "us-west1"
 location                         = "us-west1"
 zone1                            = "us-west1-a"
@@ -42,3 +45,4 @@ secondary_node_pool_min_node_count = 1
 secondary_node_pool_machine_type   = 1
 secondary_node_pool_max_node_count = "n2-standard-2"
 preemptible_spot_secondary         = true
+
