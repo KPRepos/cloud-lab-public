@@ -79,3 +79,7 @@ apt-get update
 apt-get install -y kubelet kubeadm kubectl
 apt-mark hold kubelet kubeadm kubectl
 
+
+# Disable swap again to ensure it remains off
+swapoff -a
+sed -i '/swap/ s/^/#/' /etc/fstab
