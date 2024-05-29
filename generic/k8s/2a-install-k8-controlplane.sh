@@ -106,3 +106,8 @@ echo "Kubernetes setup is complete. Please review any commented out sections rel
 
 # alias k='kubectl'
 echo "alias k='kubectl'" | sudo tee /etc/profile.d/kubectl_alias.sh > /dev/null
+
+# Disable swap again to ensure it remains off
+swapoff -a
+sed -i '/swap/ s/^/#/' /etc/fstab
+
