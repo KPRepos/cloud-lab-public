@@ -3,14 +3,6 @@ kind: Namespace
 metadata:
   name: nginx-apps-ns
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: ngnix-pod-service-account
-  namespace: nginx-apps-ns
-  annotations:
-    eks.amazonaws.com/role-arn: arn:aws:iam::1234567890:role/ngnix-pod-service-account
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
