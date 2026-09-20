@@ -1,26 +1,108 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-## Tools
+# Usage:
+#   sudo ./install.sh         # Latest upstream stable minor release
+#   sudo ./install.sh 1.37    # Requested Kubernetes minor release
+#
+# This script is for a fresh Ubuntu/Debian-based kubeadm control-plane node.
+# It initializes a single-control-plane cluster and installs Calico.
 
-apt-get install apt-transport-https gnupg curl -y
-curl -fsSL https://baltocdn.com/helm/signing.asc | sudo apt-key add -
-echo "deb https://baltocdn.com/helm/stable/debian/ all main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+if [[ "${EUID}" -ne 0 ]]; then
+  echo "Run this script as root: sudo $0 [major.minor]"
+  exit 1
+fi
 
-apt-get update -y
-apt-get install helm -y
-apt-get install jq -y
-apt-get install apt-transport-https gnupg curl -y
-apt-get install helm -y
-apt-get install nfs-common -y
-sleep 10
+export DEBIAN_FRONTEND=noninteractive
 
+K8S_VERSION_INPUT="${1:-}"
 
-# Disable swap
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "Required command not found: $1" >&2
+    exit 1
+  }
+}
+
+get_kubernetes_version() {
+  local requested="$1"
+  local stable_version
+
+  if [[ -n "${requested}" ]]; then
+    if [[ ! "${requested}" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+      echo "Invalid Kubernetes version: '${requested}'" >&2
+      echo "Use a version such as: 1.37" >&2
+      exit 1
+    fi
+
+    # Accept 1.37 or v1.37 or 1.37.0, but repository selection needs major.minor.
+    printf '%s\n' "${requested#v}" | awk -F. '{print $1 "." $2}'
+    return
+  fi
+
+  stable_version="$(
+    curl --fail --silent --show-error --location \
+      --retry 3 --retry-delay 2 \
+      https://dl.k8s.io/release/stable.txt
+  )"
+
+  if [[ ! "${stable_version}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Unable to determine a valid stable Kubernetes release." >&2
+    echo "Received: '${stable_version}'" >&2
+    exit 1
+  fi
+
+  printf '%s\n' "${stable_version#v}" | awk -F. '{print $1 "." $2}'
+}
+
+K8S_MINOR="$(get_kubernetes_version "${K8S_VERSION_INPUT}")"
+K8S_REPO="https://pkgs.k8s.io/core:/stable:/v${K8S_MINOR}/deb/"
+K8S_KEY_URL="${K8S_REPO}Release.key"
+
+echo "Selected Kubernetes minor version: v${K8S_MINOR}"
+echo "Kubernetes repository: ${K8S_REPO}"
+
+# Basic packages
+apt-get update
+apt-get install -y \
+  ca-certificates \
+  curl \
+  gpg \
+  jq \
+  nfs-common \
+  apt-transport-https
+
+# ---------------------------------------------------------------------------
+# Helm repository and package
+# ---------------------------------------------------------------------------
+install -m 0755 -d /etc/apt/keyrings
+
+HELM_BUILDKITE_APT_KEY_ID="DDF78C3E6EBB2D2CC223C95C62BA89D07698DBC6"
+
+apt-get install curl gpg apt-transport-https --yes
+
+curl -fsSL https://packages.buildkite.com/helm-linux/helm-debian/gpgkey > "${TMPDIR:-/tmp}/helm.gpg"
+
+# Ensure that the key ID matches to prevent a repository compromise from establishing an attacker controlled key
+if [ "$(gpg --show-keys --with-colons "${TMPDIR:-/tmp}/helm.gpg" | awk -F: '$1 == "fpr" {print $10}' | head -n 1)" != "${HELM_BUILDKITE_APT_KEY_ID}" ]; then echo "ERROR: Unexpected Helm APT key ID: potential key compromise"; exit 1; fi
+
+cat "${TMPDIR:-/tmp}/helm.gpg" | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+
+# apt-get update
+# apt-get install helm
+
+# ---------------------------------------------------------------------------
+# Kubernetes host prerequisites
+# ---------------------------------------------------------------------------
+
+# Disable swap now.
 swapoff -a
-sed -i '/swap.img/ s/^/#/' /etc/fstab
 
-# Load necessary modules
-cat <<EOF | tee /etc/modules-load.d/containerd.conf
+# Permanently disable all active swap mounts recorded in fstab.
+sed -ri '/\sswap\s/s/^\s*#?/#/' /etc/fstab
+
+cat > /etc/modules-load.d/kubernetes.conf <<'EOF'
 overlay
 br_netfilter
 EOF
@@ -28,86 +110,120 @@ EOF
 modprobe overlay
 modprobe br_netfilter
 
-# Set sysctl parameters
-cat <<EOT | tee /etc/sysctl.d/kube.conf
+cat > /etc/sysctl.d/99-kubernetes-cri.conf <<'EOF'
 net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
 net.ipv4.ip_forward = 1
-EOT
+EOF
 
-# Apply sysctl parameters without reboot
 sysctl --system
 
+# ---------------------------------------------------------------------------
+# Docker repository: only used here to install containerd.io
+# ---------------------------------------------------------------------------
+curl --fail --silent --show-error --location \
+  https://download.docker.com/linux/ubuntu/gpg \
+  | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
 
-# Update the package list and install required packages
-apt-get update
-apt-get install -y ca-certificates curl gnupg lsb-release
+chmod 0644 /etc/apt/keyrings/docker.gpg
 
-# Add Docker's official GPG key
-mkdir -p /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+ARCH="$(dpkg --print-architecture)"
+CODENAME="$(
+  . /etc/os-release
+  printf '%s' "${VERSION_CODENAME:-}"
+)"
 
-# Set up the Docker repository
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+if [[ -z "${CODENAME}" ]]; then
+  echo "Could not determine the distribution codename from /etc/os-release." >&2
+  exit 1
+fi
 
-# Install containerd
+cat > /etc/apt/sources.list.d/docker.list <<EOF
+deb [arch=${ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${CODENAME} stable
+EOF
+
 apt-get update
 apt-get install -y containerd.io
 
-# Configure containerd and start the service
-mkdir -p /etc/containerd
-containerd config default | tee /etc/containerd/config.toml
-sed -i 's/SystemdCgroup = false/SystemdCgroup = true/g' /etc/containerd/config.toml
+# Generate a default containerd configuration, then enable systemd cgroups.
+install -d -m 0755 /etc/containerd
+containerd config default > /etc/containerd/config.toml
+
+sed -ri 's/^(\s*)SystemdCgroup = false/\1SystemdCgroup = true/' \
+  /etc/containerd/config.toml
+
+systemctl daemon-reload
+systemctl enable --now containerd
 systemctl restart containerd
-systemctl enable containerd
 
-# Add the Kubernetes GPG key
-curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-# Add the Kubernetes repository
+# ---------------------------------------------------------------------------
+# Kubernetes v${K8S_MINOR} package repository and components
+# ---------------------------------------------------------------------------
+curl --fail --silent --show-error --location "${K8S_KEY_URL}" \
+  | gpg --dearmor --yes -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
-echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+chmod 0644 /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
+cat > /etc/apt/sources.list.d/kubernetes.list <<EOF
+deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] ${K8S_REPO} /
+EOF
 
-# Update the package list
+chmod 0644 /etc/apt/sources.list.d/kubernetes.list
+
 apt-get update
+apt-get install -y helm kubelet kubeadm kubectl
 
-# Install kubelet, kubeadm, and kubectl
-apt-get install -y kubelet kubeadm kubectl
+# Prevent unattended or manual apt upgrades from moving Kubernetes packages.
 apt-mark hold kubelet kubeadm kubectl
 
+systemctl enable --now kubelet
 
-# kubeadm init --control-plane-endpoint 10.0.0.223 
+# ---------------------------------------------------------------------------
+# Initialize the control plane
+# ---------------------------------------------------------------------------
+if [[ -f /etc/kubernetes/admin.conf ]]; then
+  echo "Kubernetes appears to be initialized already: /etc/kubernetes/admin.conf exists."
+  echo "Refusing to run kubeadm init again."
+  exit 1
+fi
 
-kubeadm init 
+kubeadm init
 
+# Configure kubectl for the invoking non-root user when run via sudo.
+TARGET_USER="${SUDO_USER:-root}"
+TARGET_HOME="$(getent passwd "${TARGET_USER}" | cut -d: -f6)"
 
+install -d -m 0700 -o "${TARGET_USER}" -g "${TARGET_USER}" \
+  "${TARGET_HOME}/.kube"
 
-# Set up local kubeconfig
-mkdir -p $HOME/.kube
-cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-chown $(id -u):$(id -g) $HOME/.kube/config
+install -m 0600 -o "${TARGET_USER}" -g "${TARGET_USER}" \
+  /etc/kubernetes/admin.conf \
+  "${TARGET_HOME}/.kube/config"
 
+# Retain your requested k8admin user, but do not clobber an existing account.
+if ! id k8admin >/dev/null 2>&1; then
+  adduser --disabled-password --gecos "" k8admin
+fi
 
-# Set up for kubeadmin user
-
-adduser --disabled-password --gecos "" k8admin
 usermod -aG sudo k8admin
-mkdir -p /home/k8admin/.kube
-cp -i /etc/kubernetes/admin.conf /home/k8admin/.kube/config
-chown k8admin:k8admin /home/k8admin/.kube/config
+install -d -m 0700 -o k8admin -g k8admin /home/k8admin/.kube
+install -m 0600 -o k8admin -g k8admin \
+  /etc/kubernetes/admin.conf \
+  /home/k8admin/.kube/config
 
-#Installing Calico 
-kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+cat > /etc/profile.d/kubectl_alias.sh <<'EOF'
+alias k='kubectl'
+EOF
+chmod 0644 /etc/profile.d/kubectl_alias.sh
 
+# Use the Calico manifest URL deliberately. Pin a tested Calico release here
+# if you want reproducible deployments rather than tracking the URL's content.
+kubectl --kubeconfig=/etc/kubernetes/admin.conf apply \
+  -f https://docs.projectcalico.org/manifests/calico.yaml
 
-echo "Kubernetes setup is complete. Please review any commented out sections relevant to your setup."
-
-# alias k='kubectl'
-echo "alias k='kubectl'" | sudo tee /etc/profile.d/kubectl_alias.sh > /dev/null
-
-# Disable swap again to ensure it remains off
-swapoff -a
-sed -i '/swap/ s/^/#/' /etc/fstab
-
+echo
+echo "Kubernetes setup is complete."
+echo "Installed Kubernetes repository minor: v${K8S_MINOR}"
+echo "Verify with:"
+echo "  kubectl get nodes"
+echo "  kubectl get pods -A"
